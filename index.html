@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#2563eb" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Expenses" />
+  <link rel="apple-touch-icon" href="icon-192.svg" />
+  <title>Expense Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header__inner">
+      <div class="brand-wrap">
+        <button class="brand__logo" id="menu-toggle" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="app-menu" aria-label="Open menu">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 7h18M3 12h18M3 17h12" />
+          </svg>
+        </button>
+        <span class="brand__name">Expense Tracker</span>
+
+        <div class="menu" id="app-menu" role="menu" hidden>
+          <button type="button" class="menu__row menu__row--btn" data-target="categories" role="menuitem">
+            <span class="menu__label">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h4l2-3h6l2 3h4v13H3z"/><circle cx="12" cy="13" r="3"/></svg>
+              Manage Categories
+            </span>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="menu__chevron"><path d="m9 6 6 6-6 6"/></svg>
+          </button>
+          <button type="button" class="menu__row menu__row--btn" id="import-stmt-btn" role="menuitem">
+            <span class="menu__label">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+              Import Statement
+            </span>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="menu__chevron"><path d="m9 6 6 6-6 6"/></svg>
+          </button>
+          <input type="file" id="stmt-file-input" accept=".pdf" hidden />
+          <div class="menu__row">
+            <span class="menu__label">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+              Dark mode
+            </span>
+            <label class="switch">
+              <input type="checkbox" id="theme-toggle" role="switch" aria-label="Toggle dark mode" />
+              <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <nav class="top-nav" aria-label="Primary">
+        <button class="nav-btn" data-target="home" aria-current="page" title="Home (Alt+1)">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/></svg>
+          <span>Home</span>
+        </button>
+        <button class="nav-btn" data-target="add" title="Add Transaction (Alt+2)">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          <span>Add</span>
+        </button>
+        <button class="nav-btn" data-target="reports" title="Reports (Alt+3)">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+          <span>Reports</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <!-- HOME / DASHBOARD -->
+    <section id="home" class="view is-active" aria-labelledby="home-title">
+      <div class="view__head">
+        <h1 id="home-title" class="view__title">Dashboard</h1>
+        <p class="view__subtitle">An overview of your balance and activity.</p>
+      </div>
+
+      <div class="summary-grid">
+        <article class="card summary-card summary-card--opening">
+          <span class="summary-card__label">Opening Balance</span>
+          <span class="summary-card__value" id="sum-opening">₹0.00</span>
+          <span class="summary-card__hint" id="sum-opening-hint">Brought forward</span>
+        </article>
+        <article class="card summary-card summary-card--income">
+          <span class="summary-card__label">Income</span>
+          <span class="summary-card__value" id="sum-income">₹0.00</span>
+          <span class="summary-card__hint">This month</span>
+        </article>
+        <article class="card summary-card summary-card--expense">
+          <span class="summary-card__label">Expenses</span>
+          <span class="summary-card__value" id="sum-expense">₹0.00</span>
+          <span class="summary-card__hint">This month</span>
+        </article>
+        <article class="card summary-card summary-card--balance">
+          <span class="summary-card__label">Closing Balance</span>
+          <span class="summary-card__value" id="sum-balance">₹0.00</span>
+          <span class="summary-card__hint">Carried forward</span>
+        </article>
+      </div>
+
+      <section class="card list-card" aria-labelledby="recent-title">
+        <header class="list-card__head">
+          <h2 id="recent-title">Recent Transactions</h2>
+          <button class="link-btn" data-target="reports" type="button">View all</button>
+        </header>
+
+        <div class="table-filters">
+          <select id="home-filter-month" class="table-filter" aria-label="Filter by month"></select>
+          <select id="home-filter-type" class="table-filter" aria-label="Filter by type">
+            <option value="all">All Types</option>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+          <select id="home-filter-category" class="table-filter" aria-label="Filter by category">
+            <option value="all">All Categories</option>
+          </select>
+        </div>
+
+        <div class="txn-table-wrap">
+          <table class="txn-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Note</th>
+                <th>Type</th>
+                <th class="num">Amount</th>
+                <th class="col-actions" aria-label="Actions"></th>
+              </tr>
+            </thead>
+            <tbody id="recent-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <!-- ADD TRANSACTION -->
+    <section id="add" class="view" aria-labelledby="add-title">
+      <div class="view__head">
+        <h1 id="add-title" class="view__title">Add Transaction</h1>
+        <p class="view__subtitle" id="add-subtitle">Record an income or expense.</p>
+      </div>
+
+      <form class="card form-card" id="txn-form">
+        <fieldset class="field field--type">
+          <legend>Type</legend>
+          <div class="segmented">
+            <label>
+              <input type="radio" name="type" value="income" checked />
+              <span>Income</span>
+            </label>
+            <label>
+              <input type="radio" name="type" value="expense" />
+              <span>Expense</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="field">
+          <label for="amount">Amount</label>
+          <div class="input-with-prefix">
+            <span class="input-prefix">₹</span>
+            <input id="amount" name="amount" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="0.00" required />
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="category">Category</label>
+            <select id="category" name="category"></select>
+          </div>
+
+          <div class="field">
+            <label for="date">Date</label>
+            <input id="date" name="date" type="date" required />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="note">Note</label>
+          <div class="autocomplete">
+            <input id="note" name="note" type="text" placeholder="e.g., Lunch with team"
+              autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"
+              aria-controls="note-suggestions" aria-activedescendant="" />
+            <ul class="autocomplete__menu" id="note-suggestions" role="listbox" hidden></ul>
+          </div>
+          <div class="smart-suggest" id="smart-suggest" hidden></div>
+        </div>
+
+        <div class="form-actions">
+          <button type="reset" class="btn btn--ghost">Cancel</button>
+          <button type="submit" class="btn btn--primary">Add Transaction</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- REPORTS -->
+    <section id="reports" class="view" aria-labelledby="reports-title">
+      <div class="view__head">
+        <h1 id="reports-title" class="view__title">Reports</h1>
+        <p class="view__subtitle">Filter and review your transactions.</p>
+      </div>
+
+      <div class="card filter-bar filter-bar--reports">
+        <div class="field">
+          <label for="filter-month">Month</label>
+          <select id="filter-month"></select>
+        </div>
+        <button type="button" class="btn btn--export" id="export-pdf-btn" aria-label="Export PDF">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>PDF</span>
+        </button>
+        <button type="button" class="btn btn--export btn--export-excel" id="export-excel-btn" aria-label="Export Excel">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Excel</span>
+        </button>
+      </div>
+
+      <section class="card list-card" aria-labelledby="all-txn-title">
+        <header class="list-card__head">
+          <h2 id="all-txn-title">All Transactions</h2>
+          <span class="muted" id="count-label">0 entries</span>
+        </header>
+
+        <div class="txn-table-wrap">
+          <table class="txn-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Note</th>
+                <th>Type</th>
+                <th class="num">Amount</th>
+                <th class="col-actions" aria-label="Actions"></th>
+              </tr>
+            </thead>
+            <tbody id="all-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card chart-card" aria-labelledby="chart-title">
+        <header class="list-card__head">
+          <h2 id="chart-title">Expense Breakdown</h2>
+          <span class="muted" id="chart-caption"></span>
+        </header>
+        <div class="chart-wrap">
+          <canvas id="expense-pie" aria-label="Expense breakdown by category"></canvas>
+          <p class="chart-empty" id="chart-empty" hidden>No expenses in this period.</p>
+        </div>
+      </section>
+    </section>
+
+    <!-- CATEGORIES -->
+    <section id="categories" class="view" aria-labelledby="categories-title">
+      <div class="view__head view__head--actions">
+        <div>
+          <h1 id="categories-title" class="view__title">Categories</h1>
+          <p class="view__subtitle">Organize your income and expense buckets.</p>
+        </div>
+        <button type="button" class="btn btn--primary" id="cat-add-btn">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Add Category
+        </button>
+      </div>
+
+      <form class="card form-card" id="cat-form" hidden>
+        <h2 class="form-card__title" id="cat-form-title">New Category</h2>
+        <div class="field">
+          <label for="cat-name">Name</label>
+          <input id="cat-name" name="name" type="text" placeholder="e.g., Coffee" required />
+        </div>
+        <fieldset class="field field--type">
+          <legend>Type</legend>
+          <div class="segmented">
+            <label>
+              <input type="radio" name="cat-type" value="income" />
+              <span>Income</span>
+            </label>
+            <label>
+              <input type="radio" name="cat-type" value="expense" checked />
+              <span>Expense</span>
+            </label>
+          </div>
+        </fieldset>
+        <div class="form-actions">
+          <button type="reset" class="btn btn--ghost">Cancel</button>
+          <button type="submit" class="btn btn--primary" id="cat-save-btn">Save</button>
+        </div>
+      </form>
+
+      <section class="card list-card" aria-labelledby="cat-income-title">
+        <header class="list-card__head">
+          <h2 id="cat-income-title">Income</h2>
+          <span class="muted" id="cat-income-count">0</span>
+        </header>
+        <ul class="category-list" id="cat-income-list"></ul>
+      </section>
+
+      <section class="card list-card" aria-labelledby="cat-expense-title">
+        <header class="list-card__head">
+          <h2 id="cat-expense-title">Expense</h2>
+          <span class="muted" id="cat-expense-count">0</span>
+        </header>
+        <ul class="category-list" id="cat-expense-list"></ul>
+      </section>
+    </section>
+
+    <!-- IMPORT REVIEW -->
+    <section id="import-review" class="view" aria-labelledby="import-title">
+      <div class="view__head">
+        <h1 id="import-title" class="view__title">Import Statement</h1>
+        <p class="view__subtitle" id="import-subtitle">Review parsed transactions before importing.</p>
+      </div>
+
+      <div class="card import-summary" id="import-summary"></div>
+
+      <div class="card list-card">
+        <header class="list-card__head">
+          <label class="import-select-all">
+            <input type="checkbox" id="import-select-all" checked />
+            <span>Select All</span>
+          </label>
+          <span class="muted" id="import-count">0 transactions</span>
+        </header>
+        <div class="import-list" id="import-list"></div>
+      </div>
+
+      <div class="import-actions">
+        <button type="button" class="btn btn--ghost" id="import-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn--primary" id="import-confirm-btn">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Import Selected
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Bottom nav (mobile) -->
+  <nav class="bottom-nav" aria-label="Primary mobile">
+    <button class="bottom-nav__btn" data-target="home" aria-current="page" title="Home (Alt+1)">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/></svg>
+      <span>Home</span>
+    </button>
+    <button class="bottom-nav__btn bottom-nav__btn--fab" data-target="add" aria-label="Add transaction" title="Add Transaction (Alt+2)">
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <button class="bottom-nav__btn" data-target="reports" title="Reports (Alt+3)">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+      <span>Reports</span>
+    </button>
+  </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.3/dist/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
