@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n \"bottom-nav__btn--fab\\\\|setActive\\\\|nav-btn\" \"c:\\\\\\\\Users\\\\\\\\Gaurav Toshniwal\\\\\\\\OneDrive\\\\\\\\New folder\\\\\\\\OneDrive\\\\\\\\文件\\\\\\\\GitHub\\\\\\\\Expense-tracker-\\\\\\\\app.js\")"
+    ]
+  }
+}
