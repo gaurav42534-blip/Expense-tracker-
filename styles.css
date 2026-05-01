@@ -8,7 +8,7 @@
 
   --text: #1A1814;
   --text-muted: #4A4540;
-  --text-soft: #8A847C;
+  --text-soft: #6B6560;
 
   --primary: #1F6B4E;
   --primary-600: #185C41;
@@ -50,7 +50,7 @@
 
   --text: #F0EBE1;
   --text-muted: #B8B0A4;
-  --text-soft: #6A6258;
+  --text-soft: #9A9490;
 
   --primary: #3DAB7A;
   --primary-600: #4FC48A;
@@ -92,7 +92,7 @@ body {
   line-height: 1.5;
   color: var(--text);
   background: var(--bg);
-  min-height: 100vh;
+  min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));
   transition: background 0.3s var(--ease), color 0.3s var(--ease);
@@ -140,8 +140,8 @@ a { color: inherit; text-decoration: none; }
   font-weight: 600;
 }
 .brand__logo {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -371,11 +371,12 @@ a { color: inherit; text-decoration: none; }
 }
 .table-filter {
   padding: 6px 28px 6px 10px;
+  min-height: 44px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--bg);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text);
   appearance: none;
@@ -442,8 +443,8 @@ a { color: inherit; text-decoration: none; }
 
 /* Delete icon button */
 .icon-btn {
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -664,10 +665,12 @@ a { color: inherit; text-decoration: none; }
 .field select {
   width: 100%;
   padding: 11px 12px;
+  min-height: 44px;
   border: 1px solid var(--border-strong);
   border-radius: 10px;
   background: var(--surface);
   font: inherit;
+  font-size: 16px;
   color: var(--text);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
   appearance: none;
@@ -1044,8 +1047,8 @@ a { color: inherit; text-decoration: none; }
 }
 
 .anim-in {
-  animation: fadeInUp 0.35s var(--ease) both;
-  animation-delay: calc(var(--i, 0) * 0.055s);
+  animation: fadeInUp 0.28s var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 0.05s);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1191,4 +1194,241 @@ a { color: inherit; text-decoration: none; }
   text-transform: uppercase;
   letter-spacing: 0.03em;
   opacity: 0.8;
+}
+
+/* ---------- Dues ---------- */
+.dues-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  cursor: pointer;
+  padding: var(--space-4) var(--space-5);
+  transition: box-shadow 0.2s var(--ease), transform 0.15s var(--ease);
+}
+.dues-summary-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+.dues-summary-card:active { transform: translateY(0); }
+
+.dues-summary-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.dues-summary-card__label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.dues-summary-card__net {
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.dues-card__net--positive { color: var(--income); }
+.dues-card__net--negative { color: var(--expense); }
+.dues-summary-card__meta { font-size: 13px; color: var(--text-soft); }
+
+/* Net balance banner in dues view */
+.dues-net {
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius);
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.dues-net--positive { background: var(--income-50); color: var(--income); }
+.dues-net--negative { background: var(--expense-50); color: var(--expense); }
+.dues-net--neutral { background: var(--bg-elevated); color: var(--text-muted); }
+
+/* Individual due rows */
+.dues-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+.dues-item:last-child { border-bottom: none; }
+.dues-item--settled { opacity: 0.55; }
+
+.dues-item__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.dues-item__name {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dues-item__note {
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dues-item__date { font-size: 12px; color: var(--text-soft); }
+
+.dues-item__right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+.dues-item__amount {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.dues-item__amount--positive { color: var(--income); }
+.dues-item__amount--negative { color: var(--expense); }
+.dues-item__amount--settled { color: var(--text-soft); text-decoration: line-through; }
+
+.dues-item__actions {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+/* Settle button */
+.btn--settle {
+  background: var(--primary-50);
+  color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+  border-radius: 20px;
+  padding: 0 12px;
+  min-height: 44px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  line-height: 1.4;
+}
+.btn--settle:hover { background: color-mix(in srgb, var(--primary) 18%, transparent); }
+
+/* Empty states */
+.dues-empty {
+  padding: var(--space-4) var(--space-5);
+  color: var(--text-soft);
+  font-style: italic;
+  font-size: 14px;
+  text-align: center;
+  margin: 0;
+}
+
+/* History collapsible */
+.dues-history-details { padding: 0; overflow: hidden; }
+.dues-history-summary {
+  padding: var(--space-4) var(--space-5);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+}
+.dues-history-summary::-webkit-details-marker { display: none; }
+.dues-history-summary::after {
+  content: "▾";
+  font-size: 12px;
+  transition: transform 0.2s var(--ease);
+}
+details[open] .dues-history-summary::after { transform: rotate(180deg); }
+
+/* ---------- Skip link ---------- */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: var(--space-4);
+  background: var(--primary);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 0 0 8px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 1000;
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+.skip-link:focus { top: 0; }
+
+/* ---------- Inline field error ---------- */
+.field__error {
+  font-size: 12px;
+  color: var(--expense);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.field input.is-invalid,
+.field select.is-invalid {
+  border-color: var(--expense);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--expense) 15%, transparent);
+}
+.input-with-prefix.is-invalid {
+  border-color: var(--expense);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--expense) 15%, transparent);
+}
+
+/* ---------- Button loading state ---------- */
+.btn--loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.75;
+}
+.btn--loading .btn-text { visibility: hidden; }
+.btn--loading::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- Chart shimmer / loading ---------- */
+.chart-shimmer {
+  position: absolute;
+  inset: var(--space-5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.chart-shimmer__ring {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 12px solid var(--border);
+  border-top-color: var(--primary);
+  animation: spin 0.9s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn--loading::after,
+  .chart-shimmer__ring { animation: none; opacity: 0.5; }
+}
+
+/* ---------- Category dot: add shape for colorblind differentiation ---------- */
+.category-list__dot--income {
+  background: var(--income);
+  border-radius: 2px; /* square = income */
+}
+.category-list__dot--expense {
+  background: var(--expense);
+  border-radius: 50%; /* circle = expense */
 }

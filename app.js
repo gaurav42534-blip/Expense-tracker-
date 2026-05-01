@@ -44,6 +44,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let transactions = loadTxns();
 
+  // Forward-declared hook for the dues balance adjustment. The dues block
+  // installs the real implementation; until then it returns 0 so the initial
+  // render() at startup is safe.
+  let _getDuesAdj = () => 0;
+
   // One-time migration: convert legacy string categories to category ids
   const fallbackId = (type) => seedId(type, type === "income" ? "Other Income" : "Other");
   const looksLikeOldCategory = (val) => typeof val === "string" && !val.startsWith("cat-");
@@ -185,7 +190,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       // Future-dated transactions are excluded from opening/month but still render in lists.
     }
-    const closingBalance = openingBalance + monthIncome - monthExpense;
+    const closingBalance = openingBalance + monthIncome - monthExpense + _getDuesAdj();
 
     sumOpeningEl.textContent = formatAmount(openingBalance);
     sumOpeningHintEl.textContent = `Brought forward to ${monthLabel(new Date())}`;
@@ -330,6 +335,8 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   };
 
+  const chartShimmerEl = document.getElementById("chart-shimmer");
+
   const renderChart = () => {
     if (!chartCanvas || typeof Chart === "undefined") return;
     const key = filterMonthEl ? filterMonthEl.value || currentMonthKey() : currentMonthKey();
@@ -344,67 +351,120 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (values.length === 0) {
       chartCanvas.hidden = true;
+      if (chartShimmerEl) chartShimmerEl.hidden = true;
       if (chartEmptyEl) chartEmptyEl.hidden = false;
       if (expenseChart) { expenseChart.destroy(); expenseChart = null; }
       return;
     }
 
-    chartCanvas.hidden = false;
     if (chartEmptyEl) chartEmptyEl.hidden = true;
+
+    // Use horizontal bar chart for >5 categories, pie for ≤5
+    const useBar = values.length > 5;
+    const newType = useBar ? "bar" : "pie";
+
+    // Destroy and recreate if chart type needs to change
+    if (expenseChart && expenseChart.config.type !== newType) {
+      expenseChart.destroy();
+      expenseChart = null;
+    }
 
     if (expenseChart) {
       expenseChart.data.labels = labels;
       expenseChart.data.datasets[0].data = values;
       expenseChart.data.datasets[0].backgroundColor = colors;
       expenseChart.update();
+      chartCanvas.hidden = false;
+      if (chartShimmerEl) chartShimmerEl.hidden = true;
       return;
     }
 
-    expenseChart = new Chart(chartCanvas.getContext("2d"), {
-      type: "pie",
-      data: {
-        labels,
-        datasets: [{
-          data: values,
-          backgroundColor: colors,
-          borderWidth: 2,
-          borderColor: "#ffffff",
-        }],
-      },
-      options: {
+    // Show shimmer while chart initialises
+    chartCanvas.hidden = true;
+    if (chartShimmerEl) chartShimmerEl.hidden = false;
+
+    requestAnimationFrame(() => {
+      chartCanvas.hidden = false;
+      if (chartShimmerEl) chartShimmerEl.hidden = true;
+
+      const sharedOptions = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
           legend: { position: "bottom", labels: { boxWidth: 12, padding: 12 } },
           tooltip: {
             callbacks: {
-              label: (ctx) => `${ctx.label}: ${formatAmount(ctx.parsed)}`,
+              label: (ctx) => `${ctx.label}: ${formatAmount(useBar ? ctx.parsed.x : ctx.parsed)}`,
             },
           },
         },
-      },
-      plugins: [{
-        id: "sliceLabels",
-        afterDraw(chart) {
-          const { ctx: c } = chart;
-          const dataset = chart.data.datasets[0];
-          const meta = chart.getDatasetMeta(0);
-          const total = dataset.data.reduce((s, v) => s + v, 0);
-          if (!total) return;
-          c.save();
-          c.textAlign = "center";
-          c.textBaseline = "middle";
-          c.fillStyle = "#fff";
-          c.font = "600 13px -apple-system, BlinkMacSystemFont, sans-serif";
-          meta.data.forEach((arc, i) => {
-            const pct = ((dataset.data[i] / total) * 100).toFixed(0);
-            if (pct < 5) return; // skip tiny slices
-            const { x, y } = arc.tooltipPosition();
-            c.fillText(`${pct}%`, x, y);
-          });
-          c.restore();
-        },
-      }],
+      };
+
+      if (useBar) {
+        expenseChart = new Chart(chartCanvas.getContext("2d"), {
+          type: "bar",
+          data: {
+            labels,
+            datasets: [{
+              data: values,
+              backgroundColor: colors,
+              borderRadius: 4,
+              borderSkipped: false,
+            }],
+          },
+          options: {
+            ...sharedOptions,
+            indexAxis: "y",
+            plugins: {
+              ...sharedOptions.plugins,
+              legend: { display: false },
+            },
+            scales: {
+              x: {
+                ticks: { callback: (v) => formatAmount(v) },
+                grid: { color: "rgba(128,128,128,0.1)" },
+              },
+              y: { grid: { display: false } },
+            },
+          },
+        });
+      } else {
+        expenseChart = new Chart(chartCanvas.getContext("2d"), {
+          type: "pie",
+          data: {
+            labels,
+            datasets: [{
+              data: values,
+              backgroundColor: colors,
+              borderWidth: 2,
+              borderColor: "#ffffff",
+            }],
+          },
+          options: sharedOptions,
+          plugins: [{
+            id: "sliceLabels",
+            afterDraw(chart) {
+              const { ctx: c } = chart;
+              const dataset = chart.data.datasets[0];
+              const meta = chart.getDatasetMeta(0);
+              const tot = dataset.data.reduce((s, v) => s + v, 0);
+              if (!tot) return;
+              c.save();
+              c.textAlign = "center";
+              c.textBaseline = "middle";
+              c.fillStyle = "#fff";
+              c.font = "600 13px -apple-system, BlinkMacSystemFont, sans-serif";
+              meta.data.forEach((arc, i) => {
+                const pct = ((dataset.data[i] / tot) * 100).toFixed(0);
+                if (pct < 5) return;
+                const { x, y } = arc.tooltipPosition();
+                c.fillText(`${pct}%`, x, y);
+              });
+              c.restore();
+            },
+          }],
+        });
+      }
     });
   };
 
@@ -714,7 +774,7 @@ document.addEventListener("DOMContentLoaded", () => {
     transactions.reduce((n, t) => (t.category === catId ? n + 1 : n), 0);
 
   const catRowHtml = (c) => {
-    const seedOther = isSeedOther(c);
+    const seedOther = isSeedOther(c) || c.system;
     return `
       <li class="category-list__item" data-cat-id="${c.id}">
         <span class="category-list__name">
@@ -784,7 +844,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const deleteCategory = (id) => {
     const cat = categoryById(id);
-    if (!cat || isSeedOther(cat)) return;
+    if (!cat || isSeedOther(cat) || cat.system) return;
     const count = usageCount(id);
     const fallback = fallbackId(cat.type);
     const fallbackName = categoryName(fallback);
@@ -883,18 +943,41 @@ document.addEventListener("DOMContentLoaded", () => {
     form.querySelector('input[name="amount"]').value = t.amount;
     form.querySelector('input[name="date"]').value = t.date;
     form.querySelector('input[name="note"]').value = t.note || "";
+    formDirty = false;
     enterEditMode();
     setActive("add");
   };
+
+  // Track whether form has unsaved input
+  let formDirty = false;
+  const markDirty = () => { formDirty = true; };
+  form.querySelectorAll("input, select, textarea").forEach((el) => {
+    el.addEventListener("input", markDirty);
+    el.addEventListener("change", markDirty);
+  });
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     const data = new FormData(form);
     const amount = parseFloat(data.get("amount"));
+
+    // Show inline error on invalid amount
+    const amountWrap = document.getElementById("amount").closest(".input-with-prefix");
+    const amountInput = document.getElementById("amount");
     if (!isFinite(amount) || amount <= 0) {
-      document.getElementById("amount").focus();
+      amountInput.classList.add("is-invalid");
+      if (amountWrap) amountWrap.classList.add("is-invalid");
+      amountInput.focus();
       return;
     }
+    amountInput.classList.remove("is-invalid");
+    if (amountWrap) amountWrap.classList.remove("is-invalid");
+
+    // Loading state
+    const btnText = submitBtn.querySelector(".btn-text") || submitBtn;
+    submitBtn.classList.add("btn--loading");
+    submitBtn.disabled = true;
+
     const fields = {
       type: data.get("type"),
       amount,
@@ -916,19 +999,25 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     saveTxns(transactions);
     render();
-    const savedType = fields.type; // preserve type across reset
+    const savedType = fields.type;
+    formDirty = false;
     form.reset();
     dateInput.value = today();
     exitEditMode();
-    // Restore the same income/expense type for next entry
+    submitBtn.classList.remove("btn--loading");
+    submitBtn.disabled = false;
     const typeRadio = form.querySelector(`input[name="type"][value="${savedType}"]`);
     if (typeRadio) typeRadio.checked = true;
     renderCategorySelect();
-    // Defer focus so it wins over any browser post-reset focus behaviour
     requestAnimationFrame(() => document.getElementById("amount").focus());
   });
 
-  form.addEventListener("reset", () => {
+  form.addEventListener("reset", (e) => {
+    if (formDirty && !confirm("Discard unsaved changes?")) {
+      e.preventDefault();
+      return;
+    }
+    formDirty = false;
     setTimeout(() => {
       dateInput.value = today();
       renderCategorySelect();
@@ -1391,7 +1480,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  const setActive = (target) => {
+  const setActive = (target, pushState = true) => {
     views.forEach((v) => v.classList.toggle("is-active", v.id === target));
     navButtons.forEach((b) => {
       if (b.dataset.target === target) {
@@ -1402,12 +1491,42 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
     const activeView = document.getElementById(target);
-    if (activeView) staggerView(activeView);
+    if (activeView) {
+      staggerView(activeView);
+      // Focus the heading so keyboard/screen-reader users know the view changed
+      const heading = activeView.querySelector("h1[tabindex='-1']");
+      if (heading) requestAnimationFrame(() => heading.focus({ preventScroll: true }));
+    }
+    if (pushState) {
+      const url = new URL(location.href);
+      url.hash = target;
+      history.pushState({ view: target }, "", url.toString());
+    }
   };
 
-  // Trigger stagger on initial page load (Home view)
-  const initialView = document.querySelector(".view.is-active");
-  if (initialView) staggerView(initialView);
+  // Handle browser back/forward
+  window.addEventListener("popstate", (e) => {
+    const target = (e.state && e.state.view) || location.hash.replace("#", "") || "home";
+    const valid = [...views].some((v) => v.id === target);
+    setActive(valid ? target : "home", false);
+  });
+
+  // On first load, activate the view matching the URL hash (if any)
+  const initialHash = location.hash.replace("#", "");
+  const hashIsValid = initialHash && [...views].some((v) => v.id === initialHash);
+  if (hashIsValid) {
+    history.replaceState({ view: initialHash }, "", location.href);
+  } else {
+    history.replaceState({ view: "home" }, "", location.href);
+  }
+
+  // Trigger stagger on initial page load (restore view from hash or default to home)
+  if (hashIsValid) {
+    setActive(initialHash, false);
+  } else {
+    const initialView = document.querySelector(".view.is-active");
+    if (initialView) staggerView(initialView);
+  }
 
   navButtons.forEach((btn) => {
     btn.addEventListener("click", (e) => {
@@ -1781,6 +1900,242 @@ document.addEventListener("DOMContentLoaded", () => {
       setActive("home");
     });
   }
+
+  // ===== Dues =====
+  const DUES_KEY = "expense-tracker:dues";
+  const loadDues = () => loadJson(DUES_KEY, []);
+  const saveDuesData = (list) => localStorage.setItem(DUES_KEY, JSON.stringify(list));
+  let dues = loadDues();
+
+  // One-time cleanup: remove any leftover dues-linked transactions and system
+  // categories from a previous version where dues created real transactions.
+  const _SYS_CAT_IDS = [
+    "cat-expense-lent-money-sys",
+    "cat-income-repayment-sys",
+    "cat-income-borrowed-sys",
+    "cat-expense-repaid-sys",
+  ];
+  const _txnLenBefore = transactions.length;
+  transactions = transactions.filter((t) => !t._dueLinked);
+  if (transactions.length !== _txnLenBefore) saveTxns(transactions);
+  const _catLenBefore = categories.length;
+  categories = categories.filter((c) => !_SYS_CAT_IDS.includes(c.id) && !c.system);
+  if (categories.length !== _catLenBefore) { saveCats(categories); renderCategoriesView(); renderCategorySelect(); }
+  let _duesNeedSave = false;
+  dues = dues.map((d) => {
+    if (d.linkedTxnId !== undefined || d.settleTxnId !== undefined) {
+      _duesNeedSave = true;
+      const { linkedTxnId, settleTxnId, ...rest } = d;
+      return rest;
+    }
+    return d;
+  });
+  if (_duesNeedSave) saveDuesData(dues);
+
+  const genDueId = () =>
+    crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random());
+  const duesDate = () => new Date().toISOString().slice(0, 10);
+
+  const getDuesNet = () => {
+    let owedToMe = 0, iOwe = 0;
+    for (const d of dues) {
+      if (d.settled) continue;
+      if (d.direction === "owed_to_me") owedToMe += d.amount;
+      else iOwe += d.amount;
+    }
+    return { owedToMe, iOwe, net: owedToMe - iOwe };
+  };
+
+  // Net effect of unsettled dues on the closing balance:
+  //   owed_to_me (I lent) → cash is OUT → negative
+  //   i_owe      (I borrowed) → cash is IN → positive
+  const getDuesBalanceAdjustment = () => {
+    const { owedToMe, iOwe } = getDuesNet();
+    return iOwe - owedToMe;
+  };
+
+  const addDue = (name, amount, direction, note, date) => {
+    dues.push({
+      id: genDueId(), name, amount, direction,
+      note: note || "", date,
+      settled: false, settledDate: null,
+    });
+    saveDuesData(dues);
+    render();
+    renderDuesView();
+    renderDuesCard();
+  };
+
+  const settleDue = (id) => {
+    const due = dues.find((d) => d.id === id);
+    if (!due || due.settled) return;
+    dues = dues.map((d) =>
+      d.id === id ? { ...d, settled: true, settledDate: duesDate() } : d
+    );
+    saveDuesData(dues);
+    render();
+    renderDuesView();
+    renderDuesCard();
+  };
+
+  const deleteDue = (id) => {
+    const due = dues.find((d) => d.id === id);
+    if (!due) return;
+    if (!confirm(`Delete due for ${due.name} (${formatAmount(due.amount)})?`)) return;
+    dues = dues.filter((d) => d.id !== id);
+    saveDuesData(dues);
+    render();
+    renderDuesView();
+    renderDuesCard();
+  };
+
+  // --- Dues home card ---
+  const duesCardContainer = document.getElementById("dues-card-container");
+  const renderDuesCard = () => {
+    if (!duesCardContainer) return;
+    const { net } = getDuesNet();
+    const activeDues = dues.filter((d) => !d.settled);
+    let netText, netCls;
+    if (net > 0) {
+      netText = `You are owed ${formatAmount(net)} net`;
+      netCls = "dues-card__net--positive";
+    } else if (net < 0) {
+      netText = `You owe ${formatAmount(Math.abs(net))} net`;
+      netCls = "dues-card__net--negative";
+    } else {
+      netText = "All settled up";
+      netCls = "";
+    }
+    const meta = activeDues.length === 0
+      ? "No active dues"
+      : `${activeDues.length} active due${activeDues.length !== 1 ? "s" : ""}`;
+
+    duesCardContainer.innerHTML = `
+      <article class="card dues-summary-card" tabindex="0" role="button" aria-label="Open Dues">
+        <div class="dues-summary-card__header">
+          <span class="dues-summary-card__label">Dues</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+        </div>
+        <div class="dues-summary-card__net ${netCls}">${netText}</div>
+        <div class="dues-summary-card__meta">${meta}</div>
+      </article>`;
+
+    const card = duesCardContainer.querySelector(".dues-summary-card");
+    card.addEventListener("click", () => setActive("dues"));
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setActive("dues"); }
+    });
+  };
+
+  // --- Dues view rendering ---
+  const renderDuesView = () => {
+    const netEl  = document.getElementById("dues-net-display");
+    const owedEl = document.getElementById("dues-owed-list");
+    const ioweEl = document.getElementById("dues-iowe-list");
+    const histEl = document.getElementById("dues-history-list");
+
+    const { net } = getDuesNet();
+    if (netEl) {
+      let cls, html;
+      if (net > 0)      { cls = "dues-net--positive"; html = `You are owed <strong>${formatAmount(net)}</strong> net`; }
+      else if (net < 0) { cls = "dues-net--negative"; html = `You owe <strong>${formatAmount(Math.abs(net))}</strong> net`; }
+      else              { cls = "dues-net--neutral";  html = "All settled up"; }
+      netEl.className = `dues-net ${cls}`;
+      netEl.innerHTML = html;
+    }
+
+    const dueRow = (d, showSettle) => `
+      <div class="dues-item${d.settled ? " dues-item--settled" : ""}" data-due-id="${escapeHtml(d.id)}">
+        <div class="dues-item__info">
+          <span class="dues-item__name">${escapeHtml(d.name)}</span>
+          ${d.note ? `<span class="dues-item__note">${escapeHtml(d.note)}</span>` : ""}
+          <span class="dues-item__date">${formatDate(d.date)}${d.settled ? ` · settled ${formatDate(d.settledDate)}` : ""}</span>
+        </div>
+        <div class="dues-item__right">
+          <span class="dues-item__amount ${d.direction === "owed_to_me" ? "dues-item__amount--positive" : "dues-item__amount--negative"}">${formatAmount(d.amount)}</span>
+          <div class="dues-item__actions">
+            ${showSettle ? `<button type="button" class="btn btn--settle" data-action="settle-due">Settle</button>` : ""}
+            <button type="button" class="icon-btn" data-action="delete-due" aria-label="Delete">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>`;
+
+    const active   = dues.filter((d) => !d.settled);
+    const owedToMe = active.filter((d) => d.direction === "owed_to_me");
+    const iOwe     = active.filter((d) => d.direction === "i_owe");
+    const settled  = dues.filter((d) => d.settled)
+      .sort((a, b) => ((b.settledDate || "") > (a.settledDate || "") ? 1 : -1));
+
+    if (owedEl) owedEl.innerHTML = owedToMe.length
+      ? owedToMe.map((d) => dueRow(d, true)).join("")
+      : `<p class="dues-empty">No one owes you right now.</p>`;
+
+    if (ioweEl) ioweEl.innerHTML = iOwe.length
+      ? iOwe.map((d) => dueRow(d, true)).join("")
+      : `<p class="dues-empty">You don't owe anyone right now.</p>`;
+
+    if (histEl) histEl.innerHTML = settled.length
+      ? settled.map((d) => dueRow(d, false)).join("")
+      : `<p class="dues-empty">No settled dues yet.</p>`;
+
+    wireDuesActions();
+  };
+
+  const wireDuesActions = () => {
+    const container = document.getElementById("dues");
+    if (!container) return;
+    container.querySelectorAll(".dues-item[data-due-id]").forEach((el) => {
+      const id = el.dataset.dueId;
+      const settleBtn = el.querySelector('[data-action="settle-due"]');
+      const deleteBtn = el.querySelector('[data-action="delete-due"]');
+      if (settleBtn) settleBtn.addEventListener("click", () => settleDue(id));
+      if (deleteBtn) deleteBtn.addEventListener("click", () => deleteDue(id));
+    });
+  };
+
+  // --- Dues form wiring ---
+  const duesForm    = document.getElementById("dues-form");
+  const duesFormName   = document.getElementById("dues-name");
+  const duesFormAmount = document.getElementById("dues-amount");
+  const duesAddBtn  = document.getElementById("dues-add-btn");
+
+  if (duesAddBtn && duesForm) {
+    duesAddBtn.addEventListener("click", () => {
+      duesForm.hidden = !duesForm.hidden;
+      if (!duesForm.hidden) {
+        const dd = document.getElementById("dues-date");
+        if (dd) dd.value = duesDate();
+        if (duesFormName) duesFormName.focus();
+      }
+    });
+  }
+
+  if (duesForm) {
+    duesForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const data = new FormData(duesForm);
+      const name      = (data.get("dues-name") || "").trim();
+      const amount    = parseFloat(data.get("dues-amount"));
+      const direction = data.get("dues-direction") || "owed_to_me";
+      const note      = (data.get("dues-note") || "").trim();
+      const date      = data.get("dues-date") || duesDate();
+      if (!name) { if (duesFormName) duesFormName.focus(); return; }
+      if (!isFinite(amount) || amount <= 0) { if (duesFormAmount) duesFormAmount.focus(); return; }
+      addDue(name, amount, direction, note, date);
+      duesForm.reset();
+      duesForm.hidden = true;
+    });
+    duesForm.addEventListener("reset", () => setTimeout(() => { duesForm.hidden = true; }, 0));
+  }
+
+  // Install the real dues balance hook and re-render so the closing balance
+  // reflects unsettled dues from the very first paint.
+  _getDuesAdj = getDuesBalanceAdjustment;
+  render();
+  renderDuesCard();
+  renderDuesView();
 
   // Focus trap for import review: TAB cycles checkbox → note → category → next row
   const importSection = document.getElementById("import-review");

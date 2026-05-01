@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <a href="#app-main" class="skip-link">Skip to main content</a>
   <header class="app-header">
     <div class="app-header__inner">
       <div class="brand-wrap">
@@ -73,11 +74,11 @@
     </div>
   </header>
 
-  <main class="app-main">
+  <main class="app-main" id="app-main">
     <!-- HOME / DASHBOARD -->
     <section id="home" class="view is-active" aria-labelledby="home-title">
       <div class="view__head">
-        <h1 id="home-title" class="view__title">Dashboard</h1>
+        <h1 id="home-title" class="view__title" tabindex="-1">Dashboard</h1>
         <p class="view__subtitle">An overview of your balance and activity.</p>
       </div>
 
@@ -103,6 +104,8 @@
           <span class="summary-card__hint">Carried forward</span>
         </article>
       </div>
+
+      <div id="dues-card-container"></div>
 
       <section class="card list-card" aria-labelledby="recent-title">
         <header class="list-card__head">
@@ -143,7 +146,7 @@
     <!-- ADD TRANSACTION -->
     <section id="add" class="view" aria-labelledby="add-title">
       <div class="view__head">
-        <h1 id="add-title" class="view__title">Add Transaction</h1>
+        <h1 id="add-title" class="view__title" tabindex="-1">Add Transaction</h1>
         <p class="view__subtitle" id="add-subtitle">Record an income or expense.</p>
       </div>
 
@@ -195,7 +198,7 @@
 
         <div class="form-actions">
           <button type="reset" class="btn btn--ghost">Cancel</button>
-          <button type="submit" class="btn btn--primary">Add Transaction</button>
+          <button type="submit" class="btn btn--primary"><span class="btn-text">Add Transaction</span></button>
         </div>
       </form>
     </section>
@@ -203,7 +206,7 @@
     <!-- REPORTS -->
     <section id="reports" class="view" aria-labelledby="reports-title">
       <div class="view__head">
-        <h1 id="reports-title" class="view__title">Reports</h1>
+        <h1 id="reports-title" class="view__title" tabindex="-1">Reports</h1>
         <p class="view__subtitle">Filter and review your transactions.</p>
       </div>
 
@@ -251,7 +254,8 @@
           <span class="muted" id="chart-caption"></span>
         </header>
         <div class="chart-wrap">
-          <canvas id="expense-pie" aria-label="Expense breakdown by category"></canvas>
+          <div class="chart-shimmer" id="chart-shimmer" aria-hidden="true"><div class="chart-shimmer__ring"></div></div>
+          <canvas id="expense-pie" aria-label="Expense breakdown by category" hidden></canvas>
           <p class="chart-empty" id="chart-empty" hidden>No expenses in this period.</p>
         </div>
       </section>
@@ -261,7 +265,7 @@
     <section id="categories" class="view" aria-labelledby="categories-title">
       <div class="view__head view__head--actions">
         <div>
-          <h1 id="categories-title" class="view__title">Categories</h1>
+          <h1 id="categories-title" class="view__title" tabindex="-1">Categories</h1>
           <p class="view__subtitle">Organize your income and expense buckets.</p>
         </div>
         <button type="button" class="btn btn--primary" id="cat-add-btn">
@@ -312,10 +316,87 @@
       </section>
     </section>
 
+    <!-- DUES -->
+    <section id="dues" class="view" aria-labelledby="dues-title">
+      <div class="view__head view__head--actions">
+        <div>
+          <h1 id="dues-title" class="view__title" tabindex="-1">Dues</h1>
+          <p class="view__subtitle">Track money lent and borrowed.</p>
+        </div>
+        <button type="button" class="btn btn--primary" id="dues-add-btn">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Add Due
+        </button>
+      </div>
+
+      <div class="dues-net" id="dues-net-display"></div>
+
+      <form class="card form-card" id="dues-form" hidden>
+        <h2 class="form-card__title">New Due</h2>
+        <div class="field">
+          <label for="dues-name">Person's Name</label>
+          <input id="dues-name" name="dues-name" type="text" placeholder="e.g., Rahul" required />
+        </div>
+        <fieldset class="field field--type">
+          <legend>Direction</legend>
+          <div class="segmented">
+            <label>
+              <input type="radio" name="dues-direction" value="owed_to_me" checked />
+              <span>They owe me</span>
+            </label>
+            <label>
+              <input type="radio" name="dues-direction" value="i_owe" />
+              <span>I owe them</span>
+            </label>
+          </div>
+        </fieldset>
+        <div class="field">
+          <label for="dues-amount">Amount</label>
+          <div class="input-with-prefix">
+            <span class="input-prefix">₹</span>
+            <input id="dues-amount" name="dues-amount" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="0.00" required />
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="dues-note">Note (optional)</label>
+            <input id="dues-note" name="dues-note" type="text" placeholder="e.g., dinner split" />
+          </div>
+          <div class="field">
+            <label for="dues-date">Date</label>
+            <input id="dues-date" name="dues-date" type="date" required />
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="reset" class="btn btn--ghost">Cancel</button>
+          <button type="submit" class="btn btn--primary">Save Due</button>
+        </div>
+      </form>
+
+      <section class="card list-card" aria-labelledby="dues-owed-title">
+        <header class="list-card__head">
+          <h2 id="dues-owed-title">They owe me</h2>
+        </header>
+        <div id="dues-owed-list"></div>
+      </section>
+
+      <section class="card list-card" aria-labelledby="dues-iowe-title">
+        <header class="list-card__head">
+          <h2 id="dues-iowe-title">I owe them</h2>
+        </header>
+        <div id="dues-iowe-list"></div>
+      </section>
+
+      <details class="card dues-history-details">
+        <summary class="dues-history-summary">History</summary>
+        <div id="dues-history-list"></div>
+      </details>
+    </section>
+
     <!-- IMPORT REVIEW -->
     <section id="import-review" class="view" aria-labelledby="import-title">
       <div class="view__head">
-        <h1 id="import-title" class="view__title">Import Statement</h1>
+        <h1 id="import-title" class="view__title" tabindex="-1">Import Statement</h1>
         <p class="view__subtitle" id="import-subtitle">Review parsed transactions before importing.</p>
       </div>
 
